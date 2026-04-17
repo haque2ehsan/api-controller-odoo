@@ -138,14 +138,19 @@ class OdooAPI {
         $vals = $this->mapToOdoo($emp);
         $result = $this->execute('hr.employee', 'write', [[$odooId], $vals]);
 
-        // Sync active status to linked portal user
-        if (isset($vals['active'])) {
+        // Sync active status and profile picture to linked portal user
+        if (isset($vals['active']) || isset($vals['image_1920'])) {
             try {
                 $empData = $this->execute('hr.employee', 'read', [[$odooId]],
                     ['fields' => ['user_id'], 'context' => ['active_test' => false]]);
                 if (!empty($empData[0]['user_id'])) {
                     $userId = $empData[0]['user_id'][0];
-                    $this->execute('res.users', 'write', [[$userId], ['active' => $vals['active']]]);
+                    $userVals = [];
+                    if (isset($vals['active'])) $userVals['active'] = $vals['active'];
+                    if (isset($vals['image_1920'])) $userVals['image_1920'] = $vals['image_1920'];
+                    if ($userVals) {
+                        $this->execute('res.users', 'write', [[$userId], $userVals]);
+                    }
                 }
             } catch (Exception $e) {
                 // Don't block employee update if user sync fails
